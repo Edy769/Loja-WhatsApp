@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo WhatsApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070D1F;--ink:#E8EEFB;--mut:#8A98B8;--card:#0F1A35;--line:#1C2B52;--acc:#4F8CFF;--acc2:#22D3EE;--wa:#25D366;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Bricolage Grotesque',system-ui,sans-serif;min-height:100vh}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(#000,transparent 75%);mask-image:linear-gradient(#000,transparent 75%)}
+main{max-width:760px;margin:0 auto;padding:20px 16px 150px}
+h1{font-size:clamp(2rem,8vw,3rem);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin:0 0 10px}
+.mut{color:var(--mut);font-size:.95rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
+.narrow{max-width:440px;margin:10vh auto;padding:26px;box-shadow:0 0 0 1px #4F8CFF33,0 24px 70px #000A}
+input,select{width:100%;padding:13px 14px;margin:6px 0;border:1px solid var(--line);border-radius:12px;background:#0A1330;color:var(--ink);font:inherit}
+button{padding:13px 18px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer;transition:transform .12s,filter .12s}
+button:hover{filter:brightness(1.12)}button:active{transform:scale(.97)}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.wa{background:var(--wa);color:#04210F;width:100%;font-weight:800;box-shadow:0 8px 28px #25D36655}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>button{flex:none}
+.top{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#070D1FCC;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:6px;margin:18px 0;padding:5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.tabs button{flex:1;background:transparent;color:var(--mut)}.tabs button.on{background:var(--acc);color:#fff}
+.item{display:flex;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}.item .g{flex:1}
+.item img,.ph{width:60px;height:60px;border-radius:12px;object-fit:cover;background:var(--line)}
+.price{font-weight:800;color:var(--acc2);font-variant-numeric:tabular-nums}
+.qty{display:flex;align-items:center;gap:12px}.qty button{padding:6px 14px}.qty .q{min-width:1.2ch;text-align:center;font-weight:800}
+.hd{display:flex;gap:14px;align-items:center;margin:8px 0 18px}.hd h1{font-size:1.7rem;margin:0}
+.av{flex:none;width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:1.6rem;font-weight:800;color:#04122E;background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.shop>.card{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;background:none;border:0;padding:0}
+.shop .item{flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px}
+.shop .item:first-child{border-top:1px solid var(--line)}
+.shop .item img,.shop .item .ph{width:100%;height:130px;border-radius:0}
+.shop .g{padding:10px 12px 4px}.shop .qty{padding:6px 12px 12px;justify-content:space-between}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:#070D1FDD;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.bar>div{max-width:760px;margin:0 auto}
+#toast{position:fixed;top:12px;left:50%;transform:translate(-50%,-90px);z-index:9;background:var(--acc2);color:#04122E;font-weight:700;padding:10px 16px;border-radius:12px;transition:transform .2s;max-width:90%}
+#toast.on{transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){#toast,button{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// 1) Cole aqui os dados do seu projeto Supabase (Project Settings > API)
+const SUPABASE_URL = 'https://ueqbybifcgfelpomyeyb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_s9hbBmppyg90KCZXl2lEjQ_osexG4mG';
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = s => document.querySelector(s), app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const wa = n => { n = String(n).replace(/\D/g, '').replace(/^0+/, ''); return n.length === 9 ? '258' + n : n; };
+const mt = n => Number(n).toLocaleString('pt-MZ') + ' MT';
+const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 3000); };
+
+async function route() {
+  const h = location.hash;
+  if (h.startsWith('#/loja/')) return shop(decodeURIComponent(h.slice(7)));
+  const { data: { session } } = await db.auth.getSession();
+  session ? dash(session.user) : auth();
+}
+addEventListener('hashchange', route); route();
+
+/* ---------- Entrar / criar conta ---------- */
+function auth() {
+  app.innerHTML = `<main class="card narrow"><h1>Venda mais pelo WhatsApp.</h1>
+    <p class="mut">Monte o catálogo da sua loja em minutos, partilhe o link e receba os pedidos organizados.</p>
+    <input id="em" type="email" placeholder="Email" autocomplete="email">
+    <input id="pw" type="password" placeholder="Palavra-passe (mínimo 6 caracteres)" autocomplete="current-password">
+    <div class="row"><button id="in">Entrar</button><button id="up" class="ghost">Criar conta</button></div></main>`;
+  const go = async fn => {
+    const { error } = await fn({ email: $('#em').value.trim(), password: $('#pw').value });
+    error ? toast(error.message) : route();
+  };
+  $('#in').onclick = () => go(x => db.auth.signInWithPassword(x));
+  $('#up').onclick = () => go(x => db.auth.signUp(x));
+}
+
+/* ---------- Painel do comerciante ---------- */
+function createStore() {
+  app.innerHTML = `<main class="card narrow"><h1>Crie a sua loja</h1>
+    <input id="n" placeholder="Nome da loja"><input id="s" placeholder="Endereço da loja (ex.: loja-da-maria)">
+    <input id="w" inputmode="numeric" placeholder="WhatsApp com código do país (ex.: 258841234567)">
+    <button id="ok">Criar loja</button></main>`;
+  $('#ok').onclick = async () => {
+    const slug = $('#s').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const whatsapp = wa($('#w').value);
+    if (!$('#n').value.trim() || !slug || !whatsapp) return toast('Preencha os três campos');
+    const { error } = await db.from('stores').insert({ name: $('#n').value.trim(), slug, whatsapp });
+    error ? toast(error.code === '23505' ? 'Esse endereço já existe. Escolha outro.' : error.message) : route();
+  };
+}
+
+async function dash(user) {
+  const { data: store } = await db.from('stores').select('*').eq('owner', user.id).maybeSingle();
+  if (!store) return createStore();
+  const link = location.href.split('#')[0] + '#/loja/' + store.slug;
+  app.innerHTML = `<header class="top"><b>${esc(store.name)}</b><button id="out" class="ghost">Sair</button></header>
+    <main><div class="card"><span class="mut">Link da sua loja (partilhe no WhatsApp e redes sociais)</span>
+    <div class="row"><input id="lnk" readonly value="${esc(link)}"><button id="cp">Copiar</button></div></div>
+    <nav class="tabs"><button data-t="p" class="on">Produtos</button><button data-t="o">Pedidos</button></nav>
+    <section id="tab"></section></main>`;
+  $('#out').onclick = async () => { await db.auth.signOut(); route(); };
+  $('#cp').onclick = () => { navigator.clipboard?.writeText(link); toast('Link copiado'); };
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    b.dataset.t === 'p' ? products(store) : orders(store);
+  });
+  products(store);
+}
+
+async function products(store) {
+  const { data } = await db.from('products').select('*').eq('store_id', store.id).order('created_at', { ascending: false });
+  const list = data || [];
+  $('#tab').innerHTML = `<div class="card"><input id="pn" placeholder="Nome do produto">
+    <input id="pp" type="number" min="0" inputmode="decimal" placeholder="Preço em MT">
+    <input id="pi" placeholder="Link da foto (opcional)"><button id="add">Adicionar produto</button></div>
+    <div class="card">${list.length ? list.map(p => `<div class="item" data-id="${p.id}">
+      ${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : '<div class="ph"></div>'}
+      <div class="g"><div>${esc(p.name)}</div><div class="price">${mt(p.price)}</div></div>
+      <button class="ghost tg">${p.available ? 'Disponível' : 'Esgotado'}</button>
+      <button class="ghost rm" aria-label="Apagar ${esc(p.name)}">Apagar</button></div>`).join('')
+      : '<p class="mut">Ainda não tem produtos. Adicione o primeiro acima.</p>'}</div>`;
+  $('#add').onclick = async () => {
+    const name = $('#pn').value.trim(), price = parseFloat($('#pp').value);
+    if (!name || isNaN(price)) return toast('Escreva o nome e o preço');
+    const { error } = await db.from('products').insert({ store_id: store.id, name, price, image_url: $('#pi').value.trim() || null });
+    error ? toast(error.message) : products(store);
+  };
+  $('#tab').onclick = async e => {
+    const row = e.target.closest('.item'); if (!row) return;
+    const p = list.find(x => x.id === row.dataset.id);
+    if (e.target.classList.contains('tg')) await db.from('products').update({ available: !p.available }).eq('id', p.id);
+    else if (e.target.classList.contains('rm') && confirm('Apagar "' + p.name + '"?')) await db.from('products').delete().eq('id', p.id);
+    else return;
+    products(store);
+  };
+}
+
+async function orders(store) {
+  const { data } = await db.from('orders').select('*').eq('store_id', store.id).order('created_at', { ascending: false });
+  const list = data || [];
+  $('#tab').innerHTML = `<div class="card">${list.length ? list.map(o => `<div class="item" data-id="${o.id}"><div class="g">
+    <b>${esc(o.customer_name)}</b> <span class="mut">${new Date(o.created_at).toLocaleString('pt-MZ')}</span>
+    <div>${o.items.map(i => `${i.qty}x ${esc(i.name)}`).join(', ')}</div><div class="price">${mt(o.total)}</div></div>
+    <select aria-label="Estado do pedido">${['novo', 'entregue', 'cancelado'].map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>`).join('')
+    : '<p class="mut">Ainda não recebeu pedidos. Partilhe o link da sua loja.</p>'}</div>`;
+  $('#tab').onchange = async e => {
+    const row = e.target.closest('.item');
+    const { error } = await db.from('orders').update({ status: e.target.value }).eq('id', row.dataset.id);
+    toast(error ? error.message : 'Estado atualizado');
+  };
+}
+
+/* ---------- Loja pública (cliente) ---------- */
+async function shop(slug) {
+  const { data: s } = await db.from('stores').select('*').eq('slug', slug).maybeSingle();
+  if (!s) { app.innerHTML = '<main class="card narrow"><h1>Loja não encontrada</h1><p class="mut">Confirme o link com o vendedor.</p></main>'; return; }
+  const { data } = await db.from('products').select('*').eq('store_id', s.id).eq('available', true).order('created_at');
+  const ps = data || [], cart = {};
+  document.title = s.name;
+  app.innerHTML = `<main class="shop"><div class="hd"><span class="av">${esc((s.name[0]||"").toUpperCase())}</span><div><h1>${esc(s.name)}</h1><p class="mut">Escolha os produtos e envie o pedido por WhatsApp.</p></div></div>
+    <div class="card">${ps.length ? ps.map(p => `<div class="item" data-id="${p.id}">
+      ${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : '<div class="ph"></div>'}
+      <div class="g"><div>${esc(p.name)}</div><div class="price">${mt(p.price)}</div></div>
+      <div class="qty"><button class="ghost m" aria-label="Menos">−</button><span class="q">0</span><button class="ghost a" aria-label="Mais">+</button></div></div>`).join('')
+      : '<p class="mut">Esta loja ainda não tem produtos.</p>'}</div></main>
+    <div class="bar"><div><input id="cn" placeholder="O seu nome"><button id="send" class="wa">Enviar pedido por WhatsApp</button></div></div>`;
+  const sum = () => ps.reduce((a, p) => a + p.price * (cart[p.id] || 0), 0);
+  const upd = () => { $('#send').textContent = sum() ? `Enviar pedido (${mt(sum())}) por WhatsApp` : 'Enviar pedido por WhatsApp'; };
+  app.onclick = e => {
+    const row = e.target.closest('.item'); if (!row) return;
+    const id = row.dataset.id;
+    if (e.target.classList.contains('a')) cart[id] = (cart[id] || 0) + 1;
+    else if (e.target.classList.contains('m')) cart[id] = Math.max(0, (cart[id] || 0) - 1);
+    else return;
+    row.querySelector('.q').textContent = cart[id]; upd();
+  };
+  $('#send').onclick = async () => {
+    const items = ps.filter(p => cart[p.id]).map(p => ({ name: p.name, price: p.price, qty: cart[p.id] }));
+    const name = $('#cn').value.trim();
+    if (!items.length) return toast('Adicione pelo menos um produto');
+    if (!name) return toast('Escreva o seu nome');
+    const total = sum();
+    await db.from('orders').insert({ store_id: s.id, customer_name: name, items, total });
+    const msg = `Olá! Sou ${name}. Quero fazer um pedido:\n` + items.map(i => `• ${i.qty}x ${i.name} (${mt(i.price * i.qty)})`).join('\n') + `\nTotal: ${mt(total)}`;
+    location.href = `https://wa.me/${wa(s.whatsapp)}?text=${encodeURIComponent(msg)}`;
+  };
+}
+</script>
+</body>
+</html>
